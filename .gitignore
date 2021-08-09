@@ -38,3 +38,5 @@ include/xbps.h
 # vim backup files
 .*.swp
 *~
+# vscode shenanigans
+.vscode
