@@ -96,13 +96,14 @@ cleaner_cb(struct xbps_handle *xhp, xbps_object_t obj,
 }
 
 int
-clean_cachedir(struct xbps_handle *xhp, bool drun)
+clean_cachedir(struct xbps_handle *xhp, bool drun, xbps_array_t * excludes)
 {
 	xbps_array_t array = NULL;
 	DIR *dirp;
 	struct dirent *dp;
 	char *ext;
 	int rv = 0;
+	bool flagged = false;
 
 	if (chdir(xhp->cachedir) == -1)
 		return -1;
@@ -123,7 +124,18 @@ clean_cachedir(struct xbps_handle *xhp, bool drun)
 			xbps_dbg_printf(xhp, "ignoring unknown file: %s\n", dp->d_name);
 			continue;
 		}
-		xbps_array_add_cstring(array, dp->d_name);
+		/* filter and flag excluded files */	
+		for (unsigned int ind = 0; ind < xbps_array_count(*excludes);ind++){
+			const char *  dummy = NULL;
+			const char ** contp = &dummy;
+			(void)xbps_array_get_cstring_nocopy(*excludes,ind,contp);
+			if(strcmp(dp->d_name,*contp)){
+				flagged = true;
+				break;
+			}
+		}
+		if(!flagged)
+			xbps_array_add_cstring(array, dp->d_name);
 	}
 	(void)closedir(dirp);
 

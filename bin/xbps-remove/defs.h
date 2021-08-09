@@ -27,6 +27,6 @@
 #define _XBPS_REMOVE_DEFS_H_
 
 /* From clean-cache.c */
-int	clean_cachedir(struct xbps_handle *, bool drun);
+int	clean_cachedir(struct xbps_handle *, bool drun, xbps_array_t *);
 
 #endif /* !_XBPS_REMOVE_DEFS_H_ */

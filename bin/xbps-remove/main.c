@@ -48,6 +48,7 @@ usage(bool fail)
 	    " -C, --config <dir>        Path to confdir (xbps.d)\n"
 	    " -c, --cachedir <dir>      Path to cachedir\n"
 	    " -d, --debug               Debug mode shown to stderr\n"
+		" -e, --exclude				Exclude package from consideration\n"
 	    " -F, --force-revdeps       Force package removal even with revdeps or\n"
 	    "                           unresolved shared libraries\n"
 	    " -f, --force               Force package files removal\n"
@@ -158,11 +159,12 @@ remove_pkg(struct xbps_handle *xhp, const char *pkgname, bool recursive)
 int
 main(int argc, char **argv)
 {
-	const char *shortopts = "C:c:dFfhnOoRr:vVy";
+	const char *shortopts = "C:c:de:FfhnOoRr:vVy";
 	const struct option longopts[] = {
 		{ "config", required_argument, NULL, 'C' },
 		{ "cachedir", required_argument, NULL, 'c' },
 		{ "debug", no_argument, NULL, 'd' },
+		{ "exclude", required_argument, NULL, 'e'},
 		{ "force-revdeps", no_argument, NULL, 'F' },
 		{ "force", no_argument, NULL, 'f' },
 		{ "help", no_argument, NULL, 'h' },
@@ -177,6 +179,7 @@ main(int argc, char **argv)
 		{ NULL, 0, NULL, 0 }
 	};
 	struct xbps_handle xh;
+	xbps_array_t excludes;
 	const char *rootdir, *cachedir, *confdir;
 	int c, flags, rv;
 	bool yes, drun, recursive, clean_cache, orphans;
@@ -185,6 +188,7 @@ main(int argc, char **argv)
 	rootdir = cachedir = confdir = NULL;
 	flags = rv = 0;
 	drun = recursive = clean_cache = yes = orphans = false;
+	excludes = xbps_array_create();
 
 	while ((c = getopt_long(argc, argv, shortopts, longopts, NULL)) != -1) {
 		switch (c) {
@@ -196,6 +200,9 @@ main(int argc, char **argv)
 			break;
 		case 'd':
 			flags |= XBPS_FLAG_DEBUG;
+			break;
+		case 'e':
+			xbps_array_add_cstring(excludes,optarg);
 			break;
 		case 'F':
 			flags |= XBPS_FLAG_FORCE_REMOVE_REVDEPS;
@@ -264,7 +271,8 @@ main(int argc, char **argv)
 	maxcols = get_maxcols();
 
 	if (clean_cache) {
-		rv = clean_cachedir(&xh, drun);
+		rv = clean_cachedir(&xh, drun, &excludes);
+		xbps_object_release(excludes);
 		if (!orphans || rv)
 			exit(rv);;
 	}
