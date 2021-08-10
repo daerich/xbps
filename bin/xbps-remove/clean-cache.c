@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <regex.h>
 
 #include <xbps.h>
 #include "defs.h"
@@ -113,6 +114,8 @@ clean_cachedir(struct xbps_handle *xhp, bool drun, xbps_array_t * excludes)
 
 	array = xbps_array_create();
 	while ((dp = readdir(dirp)) != NULL) {
+		flagged = false;
+
 		if ((strcmp(dp->d_name, ".") == 0) ||
 		    (strcmp(dp->d_name, "..") == 0))
 			continue;
@@ -125,14 +128,20 @@ clean_cachedir(struct xbps_handle *xhp, bool drun, xbps_array_t * excludes)
 			continue;
 		}
 		/* filter and flag excluded files */	
-		for (unsigned int ind = 0; ind < xbps_array_count(*excludes);ind++){
-			const char *  dummy = NULL;
-			const char ** contp = &dummy;
-			(void)xbps_array_get_cstring_nocopy(*excludes,ind,contp);
-			if(strcmp(dp->d_name,*contp)){
+		for (unsigned int ind = 0; ind < xbps_array_count(*excludes); ind++){
+			const char *contp = NULL;
+			regex_t searchex = {0};
+
+			(void)xbps_array_get_cstring_nocopy(*excludes, ind, &contp);
+			(void)regcomp(&searchex, contp, (REG_EXTENDED|REG_NOSUB));
+
+			if(regexec(&searchex, dp->d_name, 0 ,NULL, 0) == 0){
 				flagged = true;
+				regfree(&searchex);
 				break;
 			}
+			regfree(&searchex);
+
 		}
 		if(!flagged)
 			xbps_array_add_cstring(array, dp->d_name);
